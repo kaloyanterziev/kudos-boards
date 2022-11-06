@@ -2,10 +2,12 @@ package com.krterziev.kudosboards.services;
 
 import com.krterziev.kudosboards.exceptions.UserAuthenticationException;
 import com.krterziev.kudosboards.models.Board;
-import com.krterziev.kudosboards.models.EBoardAccessLevel;
+import com.krterziev.kudosboards.models.Message;
 import com.krterziev.kudosboards.models.User;
 import com.krterziev.kudosboards.payload.request.CreateBoardRequest;
+import com.krterziev.kudosboards.payload.request.CreateMessageRequest;
 import com.krterziev.kudosboards.repository.BoardRepository;
+import com.krterziev.kudosboards.repository.MessageRepository;
 import com.krterziev.kudosboards.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,10 +15,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.http.HttpStatus;
+import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.data.mongodb.core.query.UpdateDefinition;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -30,14 +33,16 @@ public class BoardServiceImpl implements BoardService {
 
     final BoardRepository boardRepository;
     final UserRepository userRepository;
+    final MessageRepository messageRepository;
 
     final MongoTemplate mongoTemplate;
 
     @Autowired
     public BoardServiceImpl(final BoardRepository boardRepository,
-                            final UserRepository userRepository, MongoTemplate mongoTemplate) {
+                            final UserRepository userRepository, MessageRepository messageRepository, MongoTemplate mongoTemplate) {
         this.boardRepository = boardRepository;
         this.userRepository = userRepository;
+        this.messageRepository = messageRepository;
         this.mongoTemplate = mongoTemplate;
     }
 
@@ -75,7 +80,21 @@ public class BoardServiceImpl implements BoardService {
                 Collections.emptyList(),
                 Collections.singletonList(user),
                 boardRequest.accessLevel());
-        return mongoTemplate.save(board);
+        return boardRepository.save(board);
+    }
+
+    @Override
+    public Message addMessageToBoard(final Board board, CreateMessageRequest messageRequest) {
+        final Optional<User> user = getUser();
+        final Message message = new Message(messageRequest.text(), messageRequest.image(), Instant.now(), user.orElse(null));
+
+        messageRepository.save(message);
+        final Query query = new Query();
+        query.addCriteria(Criteria.where("id").is(board.getId()));
+        final Update update = new Update();
+        update.addToSet("messages", message);
+        mongoTemplate.updateFirst(query, update, Board.class);
+        return message;
     }
 
     private boolean checkIfUserIsPartOfBoardUsers(final Board board) {

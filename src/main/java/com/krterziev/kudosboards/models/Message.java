@@ -5,6 +5,7 @@ import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.format.annotation.DateTimeFormat;
 
+import java.time.Instant;
 import java.util.Date;
 import java.util.Objects;
 
@@ -13,12 +14,12 @@ public class Message {
     @Id private String id;
     private String text;
     private String image;
-    @DateTimeFormat private Date createdAt;
+    @DateTimeFormat private Instant createdAt;
     @DBRef private User createdBy;
 
     public Message(final String text,
                    final String image,
-                   final Date createdAt,
+                   final Instant createdAt,
                    final User createdBy) {
         this.text = text;
         this.image = image;
@@ -50,11 +51,11 @@ public class Message {
         this.image = image;
     }
 
-    public Date getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(Date createdAt) {
+    public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 
