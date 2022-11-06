@@ -1,9 +1,9 @@
 package com.krterziev.kudosboards.payload.response;
 
-public class CreateBoardResponse {
+public class IdResponse {
     private String id;
 
-    public CreateBoardResponse(String id) {
+    public IdResponse(String id) {
         this.id = id;
     }
 
