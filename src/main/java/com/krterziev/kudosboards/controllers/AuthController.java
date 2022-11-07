@@ -1,12 +1,21 @@
 package com.krterziev.kudosboards.controllers;
 
+import com.krterziev.kudosboards.models.ERole;
+import com.krterziev.kudosboards.models.Role;
+import com.krterziev.kudosboards.models.User;
+import com.krterziev.kudosboards.payload.request.LoginRequest;
+import com.krterziev.kudosboards.payload.request.SignupRequest;
+import com.krterziev.kudosboards.payload.response.JwtResponse;
+import com.krterziev.kudosboards.payload.response.Response;
+import com.krterziev.kudosboards.repository.RoleRepository;
+import com.krterziev.kudosboards.repository.UserRepository;
+import com.krterziev.kudosboards.security.jwt.JwtUtils;
+import com.krterziev.kudosboards.security.services.UserDetailsImpl;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import javax.validation.Valid;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -21,109 +30,99 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.krterziev.kudosboards.models.ERole;
-import com.krterziev.kudosboards.models.Role;
-import com.krterziev.kudosboards.models.User;
-import com.krterziev.kudosboards.payload.request.LoginRequest;
-import com.krterziev.kudosboards.payload.request.SignupRequest;
-import com.krterziev.kudosboards.payload.response.JwtResponse;
-import com.krterziev.kudosboards.payload.response.MessageResponse;
-import com.krterziev.kudosboards.repository.RoleRepository;
-import com.krterziev.kudosboards.repository.UserRepository;
-import com.krterziev.kudosboards.security.jwt.JwtUtils;
-import com.krterziev.kudosboards.security.services.UserDetailsImpl;
-
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
-	@Autowired
-	AuthenticationManager authenticationManager;
 
-	@Autowired
-	UserRepository userRepository;
+  @Autowired
+  AuthenticationManager authenticationManager;
 
-	@Autowired
-	RoleRepository roleRepository;
+  @Autowired
+  UserRepository userRepository;
 
-	@Autowired
-	PasswordEncoder encoder;
+  @Autowired
+  RoleRepository roleRepository;
 
-	@Autowired
-	JwtUtils jwtUtils;
+  @Autowired
+  PasswordEncoder encoder;
 
-	@PostMapping("/signin")
-	public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
+  @Autowired
+  JwtUtils jwtUtils;
 
-		Authentication authentication = authenticationManager.authenticate(
-				new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+  @PostMapping("/signin")
+  public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
 
-		SecurityContextHolder.getContext().setAuthentication(authentication);
-		String jwt = jwtUtils.generateJwtToken(authentication);
-		
-		UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();		
-		List<String> roles = userDetails.getAuthorities().stream()
-				.map(GrantedAuthority::getAuthority)
-				.collect(Collectors.toList());
+    Authentication authentication = authenticationManager.authenticate(
+        new UsernamePasswordAuthenticationToken(loginRequest.getUsername(),
+            loginRequest.getPassword()));
 
-		return ResponseEntity.ok(new JwtResponse(jwt, 
-												 userDetails.id(),
-												 userDetails.getUsername(),
-												 userDetails.getEmail(), 
-												 roles));
-	}
+    SecurityContextHolder.getContext().setAuthentication(authentication);
+    String jwt = jwtUtils.generateJwtToken(authentication);
 
-	@PostMapping("/signup")
-	public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
-		if (userRepository.existsByUsername(signUpRequest.getUsername())) {
-			return ResponseEntity
-					.badRequest()
-					.body(new MessageResponse("Error: Username is already taken!"));
-		}
+    UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+    List<String> roles = userDetails.getAuthorities().stream()
+        .map(GrantedAuthority::getAuthority)
+        .collect(Collectors.toList());
 
-		if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-			return ResponseEntity
-					.badRequest()
-					.body(new MessageResponse("Error: Email is already in use!"));
-		}
+    return ResponseEntity.ok(new JwtResponse(jwt,
+        userDetails.id(),
+        userDetails.getUsername(),
+        userDetails.getEmail(),
+        roles));
+  }
 
-		// Create new user's account
-		User user = new User(signUpRequest.getUsername(), 
-							 signUpRequest.getEmail(),
-							 encoder.encode(signUpRequest.getPassword()));
+  @PostMapping("/signup")
+  public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
+    if (userRepository.existsByUsername(signUpRequest.getUsername())) {
+      return ResponseEntity
+          .badRequest()
+          .body(new Response("Error: Username is already taken!"));
+    }
 
-		Set<String> strRoles = signUpRequest.getRoles();
-		Set<Role> roles = new HashSet<>();
+    if (userRepository.existsByEmail(signUpRequest.getEmail())) {
+      return ResponseEntity
+          .badRequest()
+          .body(new Response("Error: Email is already in use!"));
+    }
 
-		if (strRoles == null) {
-			Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-					.orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-			roles.add(userRole);
-		} else {
-			strRoles.forEach(role -> {
-				switch (role) {
-					case "admin" -> {
-						Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
-								.orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-						roles.add(adminRole);
-					}
-					case "mod" -> {
-						Role modRole = roleRepository.findByName(ERole.ROLE_MODERATOR)
-								.orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-						roles.add(modRole);
-					}
-					default -> {
-						Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-								.orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-						roles.add(userRole);
-					}
-				}
-			});
-		}
+    // Create new user's account
+    User user = new User(signUpRequest.getUsername(),
+        signUpRequest.getEmail(),
+        encoder.encode(signUpRequest.getPassword()));
 
-		user.setRoles(roles);
-		userRepository.save(user);
+    Set<String> strRoles = signUpRequest.getRoles();
+    Set<Role> roles = new HashSet<>();
 
-		return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
-	}
+    if (strRoles == null) {
+      Role userRole = roleRepository.findByName(ERole.ROLE_USER)
+          .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+      roles.add(userRole);
+    } else {
+      strRoles.forEach(role -> {
+        switch (role) {
+          case "admin" -> {
+            Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
+                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+            roles.add(adminRole);
+          }
+          case "mod" -> {
+            Role modRole = roleRepository.findByName(ERole.ROLE_MODERATOR)
+                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+            roles.add(modRole);
+          }
+          default -> {
+            Role userRole = roleRepository.findByName(ERole.ROLE_USER)
+                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+            roles.add(userRole);
+          }
+        }
+      });
+    }
+
+    user.setRoles(roles);
+    userRepository.save(user);
+
+    return ResponseEntity.ok(new Response("User registered successfully!"));
+  }
 }

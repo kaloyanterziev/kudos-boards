@@ -6,11 +6,12 @@ import com.krterziev.kudosboards.payload.response.MessageResponse;
 
 public class ResponseTransformer {
 
-    private ResponseTransformer() {
-    }
+  private ResponseTransformer() {
+  }
 
-    public static BoardResponse toBoardResponse(final Board board) {
-        return new BoardResponse(board.getId(), board.getName(), board.getMessages().stream().map(message ->
-                new MessageResponse(message.getText())).toList());
-    }
+  public static BoardResponse toBoardResponse(final Board board) {
+    return new BoardResponse(board.getId(), board.getName(),
+        board.getMessages().stream().map(message ->
+            new MessageResponse(message.getText(), message.getImage())).toList());
+  }
 }
