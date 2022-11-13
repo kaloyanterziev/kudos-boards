@@ -31,7 +31,7 @@ public class MessageServiceImpl implements MessageService {
   @Override
   public void updateMessage(String id, MessageRequest messageRequest)
       throws UserAuthenticationException, ResourceNotFoundException, UserAuthorisationException {
-    final User user = userService.getAuthUser();
+    final User user = userService.getCurrentAuthUser();
     final Message message = messageRepository.findById(id)
         .orElseThrow(() -> new ResourceNotFoundException("Message", id));
 
@@ -47,7 +47,7 @@ public class MessageServiceImpl implements MessageService {
 
   @Override
   public Message createMessage(MessageRequest messageRequest) {
-    final Optional<User> user = userService.getUser();
+    final Optional<User> user = userService.getCurrentUser();
     final Message message = new Message(messageRequest.text(), messageRequest.image(),
         Instant.now(), user.orElse(null));
 
@@ -58,7 +58,7 @@ public class MessageServiceImpl implements MessageService {
   @Override
   public void deleteMessage(String id)
       throws UserAuthenticationException, ResourceNotFoundException, UserAuthorisationException {
-    final User user = userService.getAuthUser();
+    final User user = userService.getCurrentAuthUser();
     final Message message = messageRepository.findById(id)
         .orElseThrow(() -> new ResourceNotFoundException("Message", id));
 
@@ -68,5 +68,11 @@ public class MessageServiceImpl implements MessageService {
     }
 
     messageRepository.deleteById(message.getId());
+  }
+
+  @Override
+  public Message getMessage(String messageId) throws ResourceNotFoundException {
+    return messageRepository.findById(messageId)
+        .orElseThrow(() -> new ResourceNotFoundException("Message", messageId));
   }
 }

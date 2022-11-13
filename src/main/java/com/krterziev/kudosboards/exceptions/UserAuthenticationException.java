@@ -1,6 +1,6 @@
 package com.krterziev.kudosboards.exceptions;
 
-public class UserAuthenticationException extends RuntimeException {
+public class UserAuthenticationException extends Exception {
 
   public UserAuthenticationException(final Exception ex) {
     super("User not authenticated", ex);

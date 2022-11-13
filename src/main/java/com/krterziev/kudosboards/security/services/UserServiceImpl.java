@@ -19,7 +19,8 @@ public class UserServiceImpl implements UserService {
     this.userRepository = userRepository;
   }
 
-  public Optional<User> getUser() {
+  @Override
+  public Optional<User> getCurrentUser() {
     final String username;
     try {
       username = getUsername();
@@ -29,7 +30,13 @@ public class UserServiceImpl implements UserService {
     return userRepository.findByUsername(username);
   }
 
-  public User getAuthUser() throws UserAuthenticationException {
+  @Override
+  public Optional<User> getUser(final String userId) {
+    return userRepository.findById(userId);
+  }
+
+  @Override
+  public User getCurrentAuthUser() throws UserAuthenticationException {
     final String username = getUsername();
     return userRepository.findByUsername(username).orElseThrow(UserAuthenticationException::new);
   }

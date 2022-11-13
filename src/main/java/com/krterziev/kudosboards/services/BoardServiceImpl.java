@@ -56,7 +56,7 @@ public class BoardServiceImpl implements BoardService {
 
   @Override
   public List<Board> getAllBoards() {
-    Optional<User> user = userService.getUser();
+    Optional<User> user = userService.getCurrentUser();
 
     final Query query = new Query();
     if (user.isPresent()) {
@@ -69,7 +69,7 @@ public class BoardServiceImpl implements BoardService {
 
   @Override
   public Board createBoard(CreateBoardRequest boardRequest) throws UserAuthenticationException {
-    final User user = userService.getAuthUser();
+    final User user = userService.getCurrentAuthUser();
     final Board board = new Board(boardRequest.name(),
         Collections.emptyList(),
         Collections.singletonList(user),
@@ -104,13 +104,36 @@ public class BoardServiceImpl implements BoardService {
     }
   }
 
-  private boolean checkIfUserIsPartOfBoardUsers(final Board board) {
-    final Optional<User> user = userService.getUser();
-    if (user.isPresent()) {
-      return board.getUsers().stream()
-          .anyMatch(boardUser -> boardUser.getId()
-              .equals(user.orElseThrow(UserAuthorisationException::new).getId()));
+  @Override
+  public void addUserToBoard(String userId, String boardId)
+      throws UserAuthenticationException, ResourceNotFoundException, UserAuthorisationException {
+
+    final Optional<Board> board = boardRepository.findById(boardId);
+    final Optional<User> futureBoardUser = userService.getUser(userId);
+    if(board.isEmpty()) {
+      throw new ResourceNotFoundException("Board", boardId);
+    } else if(futureBoardUser.isEmpty()) {
+      throw new ResourceNotFoundException("User", userId);
     }
+
+    final User user = userService.getCurrentAuthUser();
+    if(!checkIfUserIsPartOfBoardUsers(user, board.get())) {
+      throw new UserAuthorisationException();
+    }
+
+    final Query boardQuery = Query.query(Criteria.where("id").is(boardId));
+    final Update update = new Update().addToSet("users", futureBoardUser);
+    mongoTemplate.updateFirst(boardQuery, update, Board.class);
+  }
+
+  private boolean checkIfUserIsPartOfBoardUsers(final User user, final Board board) {
+    return board.getUsers().stream()
+        .anyMatch(boardUser -> boardUser.getId().equals(user.getId()));
+  }
+
+  private boolean checkIfUserIsPartOfBoardUsers(final Board board) {
+    final Optional<User> user = userService.getCurrentUser();
+    user.ifPresent(value -> checkIfUserIsPartOfBoardUsers(value, board));
     return false;
   }
 

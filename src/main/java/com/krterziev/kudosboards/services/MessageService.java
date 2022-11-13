@@ -5,6 +5,7 @@ import com.krterziev.kudosboards.exceptions.UserAuthenticationException;
 import com.krterziev.kudosboards.exceptions.UserAuthorisationException;
 import com.krterziev.kudosboards.models.Message;
 import com.krterziev.kudosboards.payload.request.MessageRequest;
+import java.util.Optional;
 
 public interface MessageService {
 
@@ -15,4 +16,6 @@ public interface MessageService {
 
   void deleteMessage(String id)
       throws UserAuthenticationException, ResourceNotFoundException, UserAuthorisationException;
+
+  Message getMessage(String messageId) throws ResourceNotFoundException;
 }
