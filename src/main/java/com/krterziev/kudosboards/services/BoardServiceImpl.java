@@ -11,6 +11,7 @@ import com.krterziev.kudosboards.models.User;
 import com.krterziev.kudosboards.payload.request.CreateBoardRequest;
 import com.krterziev.kudosboards.repository.BoardRepository;
 import com.krterziev.kudosboards.security.services.UserService;
+import com.mongodb.DBRef;
 import com.mongodb.client.result.UpdateResult;
 import java.util.Collections;
 import java.util.List;
@@ -110,19 +111,19 @@ public class BoardServiceImpl implements BoardService {
 
     final Optional<Board> board = boardRepository.findById(boardId);
     final Optional<User> futureBoardUser = userService.getUser(userId);
-    if(board.isEmpty()) {
+    if (board.isEmpty()) {
       throw new ResourceNotFoundException("Board", boardId);
-    } else if(futureBoardUser.isEmpty()) {
+    } else if (futureBoardUser.isEmpty()) {
       throw new ResourceNotFoundException("User", userId);
     }
 
     final User user = userService.getCurrentAuthUser();
-    if(!checkIfUserIsPartOfBoardUsers(user, board.get())) {
+    if (!checkIfUserIsPartOfBoardUsers(user, board.get())) {
       throw new UserAuthorisationException();
     }
 
-    final Query boardQuery = Query.query(Criteria.where("id").is(boardId));
-    final Update update = new Update().addToSet("users", futureBoardUser);
+    final Query boardQuery = Query.query(Criteria.where("id").is(new ObjectId(boardId)));
+    final Update update = new Update().push("users", new DBRef("users", new ObjectId(userId)));
     mongoTemplate.updateFirst(boardQuery, update, Board.class);
   }
 
