@@ -2,16 +2,16 @@ package com.krterziev.kudosboards.controllers;
 
 import static com.krterziev.kudosboards.transformers.ResponseTransformer.toBoardResponse;
 
+import com.krterziev.kudosboards.exceptions.UserAuthenticationException;
 import com.krterziev.kudosboards.models.Board;
-import com.krterziev.kudosboards.models.Message;
 import com.krterziev.kudosboards.payload.request.CreateBoardRequest;
-import com.krterziev.kudosboards.payload.request.CreateMessageRequest;
 import com.krterziev.kudosboards.payload.response.BoardResponse;
 import com.krterziev.kudosboards.payload.response.IdResponse;
 import com.krterziev.kudosboards.services.BoardService;
 import com.krterziev.kudosboards.transformers.ResponseTransformer;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -30,7 +30,8 @@ public class BoardController {
 
   final BoardService boardService;
 
-  public BoardController(BoardService boardService) {
+  @Autowired
+  public BoardController(final BoardService boardService) {
     this.boardService = boardService;
   }
 
@@ -53,21 +54,13 @@ public class BoardController {
   @PostMapping()
   public ResponseEntity<IdResponse> createBoard(
       @RequestBody final CreateBoardRequest boardRequest) {
-    final Board board = boardService.createBoard(boardRequest);
-    return ResponseEntity.ok(new IdResponse(board.getId()));
-  }
-
-  @PostMapping("/{boardId}/messages")
-  public ResponseEntity<IdResponse> addMessageToBoard(@PathVariable final String boardId,
-      @RequestBody final CreateMessageRequest messageRequest) {
-    final Optional<Board> board = boardService.getBoard(boardId);
-    if (board.isEmpty()) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-          String.format("Board %s not found", boardId));
+    final Board board;
+    try {
+      board = boardService.createBoard(boardRequest);
+    } catch (UserAuthenticationException ex) {
+      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "", ex);
     }
-
-    final Message message = boardService.addMessageToBoard(board.get(), messageRequest);
-    return ResponseEntity.ok(new IdResponse(message.getId()));
+    return ResponseEntity.ok(new IdResponse(board.getId()));
   }
 
 

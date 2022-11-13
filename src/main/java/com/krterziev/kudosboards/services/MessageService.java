@@ -1,13 +1,18 @@
 package com.krterziev.kudosboards.services;
 
+import com.krterziev.kudosboards.exceptions.ResourceNotFoundException;
+import com.krterziev.kudosboards.exceptions.UserAuthenticationException;
+import com.krterziev.kudosboards.exceptions.UserAuthorisationException;
 import com.krterziev.kudosboards.models.Message;
-import java.util.List;
+import com.krterziev.kudosboards.payload.request.MessageRequest;
 
 public interface MessageService {
 
-  List<Message> getMessages();
+  void updateMessage(String id, MessageRequest messageRequest)
+      throws UserAuthenticationException, ResourceNotFoundException, UserAuthorisationException;
 
-  List<Message> getPublicMessages();
+  Message createMessage(MessageRequest messageRequest);
 
-  void addMessage();
+  void deleteMessage(String id)
+      throws UserAuthenticationException, ResourceNotFoundException, UserAuthorisationException;
 }

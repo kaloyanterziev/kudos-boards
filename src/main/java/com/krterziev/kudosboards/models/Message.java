@@ -15,17 +15,17 @@ public class Message {
   private String text;
   private String image;
   @DateTimeFormat
-  private Instant createdAt;
+  private Instant lastUpdated;
   @DBRef
   private User createdBy;
 
   public Message(final String text,
       final String image,
-      final Instant createdAt,
+      final Instant lastUpdated,
       final User createdBy) {
     this.text = text;
     this.image = image;
-    this.createdAt = createdAt;
+    this.lastUpdated = lastUpdated;
     this.createdBy = createdBy;
   }
 
@@ -53,12 +53,12 @@ public class Message {
     this.image = image;
   }
 
-  public Instant getCreatedAt() {
-    return createdAt;
+  public Instant getLastUpdated() {
+    return lastUpdated;
   }
 
-  public void setCreatedAt(Instant createdAt) {
-    this.createdAt = createdAt;
+  public void setLastUpdated(Instant lastUpdated) {
+    this.lastUpdated = lastUpdated;
   }
 
   public User getCreatedBy() {
@@ -79,13 +79,13 @@ public class Message {
       }
     Message message = (Message) o;
     return Objects.equals(id, message.id) && Objects.equals(text, message.text) && Objects.equals(
-        image, message.image) && Objects.equals(createdAt, message.createdAt) && Objects.equals(
+        image, message.image) && Objects.equals(lastUpdated, message.lastUpdated) && Objects.equals(
         createdBy, message.createdBy);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, text, image, createdAt, createdBy);
+    return Objects.hash(id, text, image, lastUpdated, createdBy);
   }
 }
 
