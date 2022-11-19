@@ -47,37 +47,24 @@ public class BoardController {
   }
 
   @GetMapping("/{id}")
-  public ResponseEntity<BoardResponse> getBoard(@PathVariable final String id) {
-    final Optional<Board> board = boardService.getBoard(id);
-    if (board.isEmpty()) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-          String.format("Board %s not found", id));
-    }
-    return ResponseEntity.ok(toBoardResponse(board.get()));
+  public ResponseEntity<BoardResponse> getBoard(@PathVariable final String id)
+      throws UserAuthenticationException, UserAuthorisationException, ResourceNotFoundException {
+    final Board board = boardService.getBoard(id);
+    return ResponseEntity.ok(toBoardResponse(board));
   }
 
   @PostMapping()
-  public ResponseEntity<IdResponse> createBoard(
-      @RequestBody final CreateBoardRequest boardRequest) {
-    final Board board;
-    try {
-      board = boardService.createBoard(boardRequest);
-    } catch (UserAuthenticationException ex) {
-      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, ex.getMessage());
-    }
+  public ResponseEntity<Void> createBoard(
+      @RequestBody final CreateBoardRequest boardRequest) throws UserAuthenticationException {
+    final Board board = boardService.createBoard(boardRequest);
     return ResponseEntity.created(URI.create("/api/boards/" + board.getId())).build();
   }
 
   @PutMapping("/{boardId}/users")
   public ResponseEntity<Void> addUserToBoard(@PathVariable final String boardId,
-      @RequestBody final IdRequest userId) {
-    try {
-      boardService.addUserToBoard(userId.id(), boardId);
-    } catch (ResourceNotFoundException ex) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
-    } catch (UserAuthenticationException | UserAuthorisationException  ex) {
-      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, ex.getMessage());
-    }
+      @RequestBody final IdRequest userId)
+      throws UserAuthenticationException, UserAuthorisationException, ResourceNotFoundException {
+    boardService.addUserToBoard(userId.id(), boardId);
     return ResponseEntity.ok().build();
   }
 

@@ -41,17 +41,16 @@ public class BoardServiceImpl implements BoardService {
   }
 
   @Override
-  public Optional<Board> getBoard(String id) {
+  public Board getBoard(final String id)
+      throws ResourceNotFoundException, UserAuthorisationException, UserAuthenticationException {
     final Query query = new Query();
     query.addCriteria(Criteria.where("id").is(id));
-    final Optional<Board> board = boardRepository.findById(id);
-    if (board.isEmpty()) {
-      return board;
-    }
+    final Board board = boardRepository.findById(id)
+        .orElseThrow(() -> new ResourceNotFoundException("Board", id));
 
-    return switch (board.get().getAccessLevel()) {
+    return switch (board.getAccessLevel()) {
       case PUBLIC, LINK -> board;
-      case PRIVATE -> checkIfUserIsPartOfBoardUsers(board.get()) ? board : Optional.empty();
+      case PRIVATE -> checkIfUserIsPartOfBoardAndReturnBoard(board);
     };
   }
 
@@ -91,7 +90,7 @@ public class BoardServiceImpl implements BoardService {
   }
 
   @Override
-  public void deleteMessageFromBoard(String boardId, String messageId)
+  public void deleteMessageFromBoard(final String boardId, final String messageId)
       throws ResourceNotFoundException {
     final Query boardQuery = Query.query(Criteria.where("id").is(boardId));
     final Query messageQuery = Query.query(Criteria.where("$id").is(new ObjectId(messageId)));
@@ -106,7 +105,7 @@ public class BoardServiceImpl implements BoardService {
   }
 
   @Override
-  public void addUserToBoard(String userId, String boardId)
+  public void addUserToBoard(final String userId, final String boardId)
       throws UserAuthenticationException, ResourceNotFoundException, UserAuthorisationException {
 
     final Optional<Board> board = boardRepository.findById(boardId);
@@ -118,7 +117,7 @@ public class BoardServiceImpl implements BoardService {
     }
 
     final User user = userService.getCurrentAuthUser();
-    if (!checkIfUserIsPartOfBoardUsers(user, board.get())) {
+    if (!checkIfUserIsPartOfBoard(user, board.get())) {
       throw new UserAuthorisationException();
     }
 
@@ -127,15 +126,19 @@ public class BoardServiceImpl implements BoardService {
     mongoTemplate.updateFirst(boardQuery, update, Board.class);
   }
 
-  private boolean checkIfUserIsPartOfBoardUsers(final User user, final Board board) {
+  private boolean checkIfUserIsPartOfBoard(final User user, final Board board) {
     return board.getUsers().stream()
         .anyMatch(boardUser -> boardUser.getId().equals(user.getId()));
   }
 
-  private boolean checkIfUserIsPartOfBoardUsers(final Board board) {
-    final Optional<User> user = userService.getCurrentUser();
-    user.ifPresent(value -> checkIfUserIsPartOfBoardUsers(value, board));
-    return false;
+  private Board checkIfUserIsPartOfBoardAndReturnBoard(final Board board)
+      throws UserAuthenticationException, UserAuthorisationException {
+    final User user = userService.getCurrentAuthUser();
+    if(checkIfUserIsPartOfBoard(user, board)) {
+      return board;
+    } else {
+      throw new UserAuthorisationException();
+    }
   }
 
 

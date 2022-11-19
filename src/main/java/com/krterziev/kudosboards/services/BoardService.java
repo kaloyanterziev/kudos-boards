@@ -11,7 +11,8 @@ import java.util.Optional;
 
 public interface BoardService {
 
-  Optional<Board> getBoard(String id);
+  Board getBoard(String id)
+      throws ResourceNotFoundException, UserAuthorisationException, UserAuthenticationException;
 
   List<Board> getAllBoards();
 

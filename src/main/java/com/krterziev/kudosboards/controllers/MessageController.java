@@ -41,53 +41,35 @@ public class MessageController {
   }
 
   @GetMapping("/{messageId}")
-  public ResponseEntity<MessageResponse> getMessage(@PathVariable final String messageId) {
-    final Message message;
-    try {
-      message = messageService.getMessage(messageId);
-    } catch (ResourceNotFoundException ex) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
-    }
+  public ResponseEntity<MessageResponse> getMessage(@PathVariable final String messageId)
+      throws ResourceNotFoundException {
+    final Message message = messageService.getMessage(messageId);
     return ResponseEntity.ok(ResponseTransformer.toMessageResponse(message));
   }
 
   @PostMapping()
   public ResponseEntity<IdResponse> addMessageToBoard(@PathVariable final String boardId,
-      @RequestBody final MessageRequest messageRequest) {
+      @RequestBody final MessageRequest messageRequest) throws ResourceNotFoundException {
     final Message message = messageService.createMessage(messageRequest);
-    try {
-      boardService.addMessageToBoard(boardId, message);
-    } catch (ResourceNotFoundException ex) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
-    }
+    boardService.addMessageToBoard(boardId, message);
     return ResponseEntity.created(
         URI.create(String.format("/api/boards/%s/messages/%s", boardId, message.getId()))).build();
   }
 
   @PutMapping("/{messageId}")
   public ResponseEntity<Void> updateMessage(@PathVariable final String messageId,
-      @RequestBody final MessageRequest messageRequest) {
-    try {
-      messageService.updateMessage(messageId, messageRequest);
-    } catch (UserAuthorisationException | UserAuthenticationException ex) {
-      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, ex.getMessage());
-    } catch (ResourceNotFoundException ex) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
-    }
+      @RequestBody final MessageRequest messageRequest)
+      throws UserAuthenticationException, UserAuthorisationException, ResourceNotFoundException {
+    messageService.updateMessage(messageId, messageRequest);
     return ResponseEntity.ok().build();
   }
 
   @DeleteMapping("/{messageId}")
   public ResponseEntity<Void> deleteMessage(@PathVariable final String messageId,
-      @PathVariable final String boardId) {
-    try {
-      boardService.deleteMessageFromBoard(boardId, messageId);
-      messageService.deleteMessage(messageId);
-    } catch (UserAuthorisationException | UserAuthenticationException ex) {
-      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, ex.getMessage());
-    } catch (ResourceNotFoundException ex) {
-      throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
-    }
+      @PathVariable final String boardId)
+      throws ResourceNotFoundException, UserAuthenticationException, UserAuthorisationException {
+    boardService.deleteMessageFromBoard(boardId, messageId);
+    messageService.deleteMessage(messageId);
     return ResponseEntity.ok().build();
   }
 
