@@ -7,7 +7,6 @@ import com.krterziev.kudosboards.models.Board;
 import com.krterziev.kudosboards.models.Message;
 import com.krterziev.kudosboards.payload.request.CreateBoardRequest;
 import java.util.List;
-import java.util.Optional;
 
 public interface BoardService {
 
@@ -18,7 +17,7 @@ public interface BoardService {
 
   Board createBoard(CreateBoardRequest board) throws UserAuthenticationException;
 
-  Message addMessageToBoard(String boardId, Message message) throws ResourceNotFoundException;
+  void addMessageToBoard(String boardId, Message message) throws ResourceNotFoundException;
 
   void deleteMessageFromBoard(String boardId, String messageId) throws ResourceNotFoundException;
 

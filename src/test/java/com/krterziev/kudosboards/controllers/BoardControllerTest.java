@@ -1,6 +1,9 @@
 package com.krterziev.kudosboards.controllers;
 
 import static com.krterziev.kudosboards.matchers.ResponseBodyMatchers.responseBody;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -10,32 +13,28 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.krterziev.kudosboards.exceptions.ResourceNotFoundException;
+import com.krterziev.kudosboards.exceptions.UserAuthenticationException;
+import com.krterziev.kudosboards.exceptions.UserAuthorisationException;
 import com.krterziev.kudosboards.models.Board;
 import com.krterziev.kudosboards.models.EBoardAccessLevel;
 import com.krterziev.kudosboards.payload.request.CreateBoardRequest;
 import com.krterziev.kudosboards.payload.request.IdRequest;
 import com.krterziev.kudosboards.payload.response.BoardResponse;
-import com.krterziev.kudosboards.payload.response.IdResponse;
 import com.krterziev.kudosboards.services.BoardService;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
 
 
 @WebMvcTest(value = BoardController.class)
-public class BoardControllerTest extends ControllerTest {
-
-  private final static String BOARD_ID_1 = "asdfg-12345-hjkl";
-  private final static String BOARD_ID_2 = "qwert-67890-uiop";
-  private static final String BOARD_NAME = "Board Name";
-
-  private static final String USER_ID = "zxcv-3456-bnmz";
+class BoardControllerTest extends ControllerTest {
+  private static final String PATH = "/api/boards/";
+  final static String BOARD_ID_1 = "asdfg-12345-hjkl";
+  final static String BOARD_ID_2 = "qwert-67890-uiop";
+  static final String BOARD_NAME = "Board Name";
+  static final String USER_ID = "zxcv-3456-bnmz";
 
   @MockBean
   private BoardService service;
@@ -48,19 +47,44 @@ public class BoardControllerTest extends ControllerTest {
 
     when(service.getBoard(BOARD_ID_1)).thenReturn(board);
 
-    mvc.perform(get("/api/boards/" + BOARD_ID_1))
+    mvc.perform(get(PATH + BOARD_ID_1))
         .andExpect(status().isOk())
         .andExpect(responseBody().containsObjectAsJson(board, BoardResponse.class));
+
+    verify(service, times(1)).getBoard(BOARD_ID_1);
   }
 
-
   @Test
-  void givenNonExistingBoard_whenGetBoardById_thenReturnBoardResponse()
+  void givenNonExistingBoard_whenGetBoardById_thenReturn404()
       throws Exception {
     when(service.getBoard(BOARD_ID_1)).thenThrow(new ResourceNotFoundException("Board", BOARD_ID_1));
 
-    mvc.perform(get("/api/boards/" + BOARD_ID_1))
+    mvc.perform(get(PATH + BOARD_ID_1))
+        .andExpect(status().isNotFound());
+
+    verify(service, times(1)).getBoard(BOARD_ID_1);
+  }
+
+  @Test
+  void givenPrivateBoardAndUserNotLoggedIn_whenGetBoardById_thenReturnUnauthorized()
+      throws Exception {
+    when(service.getBoard(BOARD_ID_1)).thenThrow(new UserAuthenticationException());
+
+    mvc.perform(get(PATH + BOARD_ID_1))
         .andExpect(status().isUnauthorized());
+
+    verify(service, times(1)).getBoard(BOARD_ID_1);
+  }
+
+  @Test
+  void givenPrivateBoardAndUserNotPartOfBoard_whenGetBoardById_thenReturnUnauthorized()
+      throws Exception {
+    when(service.getBoard(BOARD_ID_1)).thenThrow(new UserAuthorisationException());
+
+    mvc.perform(get(PATH + BOARD_ID_1))
+        .andExpect(status().isUnauthorized());
+
+    verify(service, times(1)).getBoard(BOARD_ID_1);
   }
 
   @Test
@@ -72,6 +96,8 @@ public class BoardControllerTest extends ControllerTest {
     mvc.perform(get("/api/boards"))
         .andExpect(status().isOk())
         .andExpect(responseBody().containsObjectsAsJson(expected(boards), BoardResponse.class));
+
+    verify(service, times(1)).getAllBoards();
   }
 
   @Test
@@ -85,6 +111,8 @@ public class BoardControllerTest extends ControllerTest {
         .andExpect(status().isOk())
         .andExpect(
             responseBody().containsObjectsAsJson(expected(boards), BoardResponse.class));
+
+    verify(service, times(1)).getAllBoards();
   }
 
   @Test
@@ -96,6 +124,8 @@ public class BoardControllerTest extends ControllerTest {
         .andExpect(status().isOk())
         .andExpect(
             responseBody().containsObjectsAsJson(Collections.emptyList(), BoardResponse.class));
+
+    verify(service, times(1)).getAllBoards();
   }
 
   @Test
@@ -111,18 +141,92 @@ public class BoardControllerTest extends ControllerTest {
             .contentType("application/json")
             .content(objectMapper.writeValueAsString(boardRequest)))
         .andExpect(status().isCreated())
-        .andExpect(header().string("Location", "/api/boards/" + BOARD_ID_1));
+        .andExpect(header().string("Location", PATH + BOARD_ID_1));
 
+    verify(service, times(1)).createBoard(boardRequest);
+
+  }
+
+  @Test
+  void givenBoardRequestAndUserNotLoggedIn_whenPostBoard_thenReturnUnauthorized() throws Exception {
+    final CreateBoardRequest boardRequest = givenBoardRequest();
+
+    when(service.createBoard(boardRequest)).thenThrow(new UserAuthenticationException());
+
+    mvc.perform(post("/api/boards")
+            .contentType("application/json")
+            .content(objectMapper.writeValueAsString(boardRequest)))
+        .andExpect(status().isUnauthorized());
+
+    verify(service, times(1)).createBoard(boardRequest);
   }
 
   @Test
   void givenBoardIdAndUserId_whenAddUserToBoard_thenReturnOk() throws Exception {
     final IdRequest userIdRequest = new IdRequest(USER_ID);
 
-    mvc.perform(put("/api/boards/" + BOARD_ID_1 + "/users")
+    mvc.perform(put(PATH + BOARD_ID_1 + "/users")
             .contentType("application/json")
             .content(objectMapper.writeValueAsString(userIdRequest)))
         .andExpect(status().isOk());
+
+    verify(service, times(1)).addUserToBoard(USER_ID, BOARD_ID_1);
+  }
+
+  @Test
+  void givenNonExistingBoardIdAndUserId_whenAddUserToBoard_thenReturnNotFound() throws Exception {
+    final IdRequest userIdRequest = new IdRequest(USER_ID);
+    doThrow(new ResourceNotFoundException("Board", BOARD_ID_1))
+        .when(service).addUserToBoard(USER_ID, BOARD_ID_1);
+
+    mvc.perform(put(PATH + BOARD_ID_1 + "/users")
+            .contentType("application/json")
+            .content(objectMapper.writeValueAsString(userIdRequest)))
+        .andExpect(status().isNotFound());
+
+    verify(service, times(1)).addUserToBoard(USER_ID, BOARD_ID_1);
+  }
+
+  @Test
+  void givenBoardIdAndNonExistingUserId_whenAddUserToBoard_thenReturnNotFound() throws Exception {
+    final IdRequest userIdRequest = new IdRequest(USER_ID);
+    doThrow(new ResourceNotFoundException("User", USER_ID))
+        .when(service).addUserToBoard(USER_ID, BOARD_ID_1);
+
+    mvc.perform(put(PATH + BOARD_ID_1 + "/users")
+            .contentType("application/json")
+            .content(objectMapper.writeValueAsString(userIdRequest)))
+        .andExpect(status().isNotFound());
+
+    verify(service, times(1)).addUserToBoard(USER_ID, BOARD_ID_1);
+  }
+
+  @Test
+  void givenBoardIdAndUserIdButNotLoggedIn_whenAddUserToBoard_thenReturnUnauthorized() throws Exception {
+    final IdRequest userIdRequest = new IdRequest(USER_ID);
+    doThrow(new UserAuthenticationException())
+        .when(service).addUserToBoard(USER_ID, BOARD_ID_1);
+
+    mvc.perform(put(PATH + BOARD_ID_1 + "/users")
+            .contentType("application/json")
+            .content(objectMapper.writeValueAsString(userIdRequest)))
+        .andExpect(status().isUnauthorized());
+
+    verify(service, times(1)).addUserToBoard(USER_ID, BOARD_ID_1);
+  }
+
+  @Test
+  void givenBoardIdAndUserNotPartOfBoard_whenAddUserToBoard_thenReturnUnauthorized() throws Exception {
+    final IdRequest userIdRequest = new IdRequest(USER_ID);
+    doThrow(new UserAuthorisationException())
+        .when(service).addUserToBoard(USER_ID, BOARD_ID_1);
+
+    mvc.perform(put(PATH + BOARD_ID_1 + "/users")
+            .contentType("application/json")
+            .content(objectMapper.writeValueAsString(userIdRequest)))
+        .andExpect(status().isUnauthorized());
+
+    verify(service, times(1)).addUserToBoard(USER_ID, BOARD_ID_1);
   }
 
   private static Board givenBoard() {

@@ -78,7 +78,7 @@ public class BoardServiceImpl implements BoardService {
   }
 
   @Override
-  public Message addMessageToBoard(final String boardId, final Message message)
+  public void addMessageToBoard(final String boardId, final Message message)
       throws ResourceNotFoundException {
     final Query boardQuery = Query.query(Criteria.where("id").is(boardId));
     final Update update = new Update().addToSet("messages", message);
@@ -86,7 +86,6 @@ public class BoardServiceImpl implements BoardService {
     if (result.getMatchedCount() != 1L) {
       throw new ResourceNotFoundException("Board", boardId);
     }
-    return message;
   }
 
   @Override

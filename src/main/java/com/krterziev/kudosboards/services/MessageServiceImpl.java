@@ -31,14 +31,7 @@ public class MessageServiceImpl implements MessageService {
   @Override
   public void updateMessage(String id, MessageRequest messageRequest)
       throws UserAuthenticationException, ResourceNotFoundException, UserAuthorisationException {
-    final User user = userService.getCurrentAuthUser();
-    final Message message = messageRepository.findById(id)
-        .orElseThrow(() -> new ResourceNotFoundException("Message", id));
-
-    if(message.getCreatedBy() != null
-        && !Objects.equals(message.getCreatedBy().getId(), user.getId())) {
-      throw new UserAuthorisationException();
-    }
+    final Message message = checkIfMessageOwnedByUser(id);
 
     UpdateTransformer.updateMessage(message, messageRequest);
 
@@ -58,14 +51,7 @@ public class MessageServiceImpl implements MessageService {
   @Override
   public void deleteMessage(String id)
       throws UserAuthenticationException, ResourceNotFoundException, UserAuthorisationException {
-    final User user = userService.getCurrentAuthUser();
-    final Message message = messageRepository.findById(id)
-        .orElseThrow(() -> new ResourceNotFoundException("Message", id));
-
-    if(message.getCreatedBy() != null
-        && !Objects.equals(message.getCreatedBy().getId(), user.getId())) {
-      throw new UserAuthorisationException();
-    }
+    final Message message = checkIfMessageOwnedByUser(id);
 
     messageRepository.deleteById(message.getId());
   }
@@ -74,5 +60,18 @@ public class MessageServiceImpl implements MessageService {
   public Message getMessage(String messageId) throws ResourceNotFoundException {
     return messageRepository.findById(messageId)
         .orElseThrow(() -> new ResourceNotFoundException("Message", messageId));
+  }
+
+  private Message checkIfMessageOwnedByUser(final String id)
+      throws UserAuthenticationException, ResourceNotFoundException, UserAuthorisationException {
+    final User user = userService.getCurrentAuthUser();
+    final Message message = messageRepository.findById(id)
+        .orElseThrow(() -> new ResourceNotFoundException("Message", id));
+
+    if(message.getCreatedBy() != null
+        && !Objects.equals(message.getCreatedBy().getId(), user.getId())) {
+      throw new UserAuthorisationException();
+    }
+    return message;
   }
 }
