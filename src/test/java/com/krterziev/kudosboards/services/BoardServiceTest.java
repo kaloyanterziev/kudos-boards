@@ -50,9 +50,9 @@ class BoardServiceTest {
 
   final BoardService boardService;
 
-  BoardRepository boardRepository;
-  UserService userService;
-  MongoTemplate mongoTemplate;
+  final BoardRepository boardRepository;
+  final UserService userService;
+  final MongoTemplate mongoTemplate;
 
   public BoardServiceTest() {
     boardRepository = mock(BoardRepository.class);
@@ -140,7 +140,6 @@ class BoardServiceTest {
     verify(userService, times(1)).getCurrentAuthUser();
   }
 
-  // getAllBoards()
   @Test
   void givenPresentUser_whenGetAllBoards_thenReturnBothBoards() {
     final User user = givenUser(USER_ID);
@@ -155,6 +154,7 @@ class BoardServiceTest {
 
     assertThat(actualBoards, equalTo(boards));
     verify(userService, times(1)).getCurrentUser();
+    verify(mongoTemplate, times(1)).find(any(Query.class), eq(Board.class));
   }
 
   @Test
@@ -163,12 +163,13 @@ class BoardServiceTest {
     List<Board> boards = List.of(publicBoard);
 
     when(userService.getCurrentUser()).thenReturn(Optional.empty());
-    when(mongoTemplate.find(any(), eq(Board.class))).thenReturn(boards);
+    when(mongoTemplate.find(any(Query.class), eq(Board.class))).thenReturn(boards);
 
     final List<Board> actualBoards = boardService.getAllBoards();
 
     assertThat(actualBoards, equalTo(boards));
     verify(userService, times(1)).getCurrentUser();
+    verify(mongoTemplate, times(1)).find(any(Query.class), eq(Board.class));
   }
 
   @Test
@@ -201,9 +202,6 @@ class BoardServiceTest {
     verify(mongoTemplate, times(1)).updateFirst(any(Query.class), any(Update.class),
         eq(Board.class));
   }
-
-  ////
-
 
   @Test
   void givenBoardAndMessage_whenDeleteMessageFromBoard_thenOneBoardIsUpdated()
