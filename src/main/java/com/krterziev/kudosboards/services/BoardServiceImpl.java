@@ -106,18 +106,19 @@ public class BoardServiceImpl implements BoardService {
   @Override
   public void addUserToBoard(final String userId, final String boardId)
       throws UserAuthenticationException, ResourceNotFoundException, UserAuthorisationException {
-
+    final User user = userService.getCurrentAuthUser();
     final Optional<Board> board = boardRepository.findById(boardId);
-    final Optional<User> futureBoardUser = userService.getUser(userId);
     if (board.isEmpty()) {
       throw new ResourceNotFoundException("Board", boardId);
-    } else if (futureBoardUser.isEmpty()) {
-      throw new ResourceNotFoundException("User", userId);
     }
 
-    final User user = userService.getCurrentAuthUser();
     if (!checkIfUserIsPartOfBoard(user, board.get())) {
       throw new UserAuthorisationException();
+    }
+
+    final Optional<User> futureBoardUser = userService.getUser(userId);
+    if (futureBoardUser.isEmpty()) {
+      throw new ResourceNotFoundException("User", userId);
     }
 
     final Query boardQuery = Query.query(Criteria.where("id").is(new ObjectId(boardId)));

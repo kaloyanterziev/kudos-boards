@@ -22,7 +22,8 @@ dependencies {
 	implementation 'javax.xml.bind:jaxb-api:2.4.0-b180830.0359'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-web'
-	testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+	testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+	testImplementation 'org.junit.jupiter:junit-jupiter-params:5.8.1'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testImplementation 'org.hamcrest:hamcrest:2.2'
 }
